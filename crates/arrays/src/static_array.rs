@@ -4,7 +4,7 @@ enum InsertError {
     ArrayIsFull,
 }
 
-pub fn insert(
+fn insert(
     values: &mut [i32],
     len: &mut usize,
     index: usize,
@@ -22,6 +22,27 @@ pub fn insert(
     }
     values[index] = value;
     *len += 1;
+
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum DeleteError {
+    IndexOutOfCapacity,
+    EmptyArray,
+}
+
+fn delete(values: &mut [i32], len: &mut usize, index: usize) -> Result<(), DeleteError> {
+    if *len == 0 {
+        return Err(DeleteError::EmptyArray);
+    } else if index >= *len {
+        return Err(DeleteError::IndexOutOfCapacity);
+    }
+
+    for i in index..=*len - 1 {
+        values[i] = values[i + 1];
+    }
+    *len -= 1;
 
     Ok(())
 }
@@ -112,5 +133,76 @@ mod tests {
         assert_eq!(result, Ok(()));
         assert_eq!(len, 4);
         assert_eq!(&values[..len], &[10, 20, 30, 40]);
+    }
+
+    #[test]
+    fn deletes_from_middle_and_shifts_left() {
+        let mut values = [10, 20, 30, 40, 0];
+        let mut len = 4;
+
+        let result = delete(&mut values, &mut len, 1);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(len, 3);
+        assert_eq!(&values[..len], &[10, 30, 40]);
+    }
+
+    #[test]
+    fn deletes_first_element() {
+        let mut values = [10, 20, 30, 0, 0];
+        let mut len = 3;
+
+        let result = delete(&mut values, &mut len, 0);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(len, 2);
+        assert_eq!(&values[..len], &[20, 30]);
+    }
+
+    #[test]
+    fn deletes_last_element() {
+        let mut values = [10, 20, 30, 0, 0];
+        let mut len = 3;
+
+        let result = delete(&mut values, &mut len, 2);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(len, 2);
+        assert_eq!(&values[..len], &[10, 20]);
+    }
+
+    #[test]
+    fn returns_error_when_array_is_empty() {
+        let mut values = [0, 0, 0];
+        let mut len = 0;
+
+        let result = delete(&mut values, &mut len, 0);
+
+        assert_eq!(result, Err(DeleteError::EmptyArray));
+        assert_eq!(len, 0);
+    }
+
+    #[test]
+    fn returns_error_when_index_is_out_of_logical_len() {
+        let mut values = [10, 20, 30, 0, 0];
+        let mut len = 3;
+
+        let result = delete(&mut values, &mut len, 3);
+
+        assert_eq!(result, Err(DeleteError::IndexOutOfCapacity));
+        assert_eq!(len, 3);
+        assert_eq!(&values[..len], &[10, 20, 30]);
+    }
+
+    #[test]
+    fn returns_error_when_index_is_bigger_than_capacity() {
+        let mut values = [10, 20, 30];
+        let mut len = 3;
+
+        let result = delete(&mut values, &mut len, 10);
+
+        assert_eq!(result, Err(DeleteError::IndexOutOfCapacity));
+        assert_eq!(len, 3);
+        assert_eq!(&values[..len], &[10, 20, 30]);
     }
 }
