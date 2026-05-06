@@ -1,208 +1,221 @@
-#[derive(Debug, PartialEq, Eq)]
-enum InsertError {
-    IndexOutOfCapacity,
-    ArrayIsFull,
+fn insert<const LEN: usize>(values: [i32; LEN], index: usize, value: i32) -> Vec<i32> {
+    let new_len = LEN + 1;
+    let mut result = vec![0; new_len];
+
+    for i in 0..index {
+        result[i] = values[i];
+    }
+
+    for i in (index + 1..new_len).rev() {
+        result[i] = values[i - 1];
+    }
+    result[index] = value;
+    result
 }
 
-fn insert(
-    values: &mut [i32],
-    len: &mut usize,
-    index: usize,
-    value: i32,
-) -> Result<(), InsertError> {
-    if index > *len {
-        println!("{}", values.len());
-        return Err(InsertError::IndexOutOfCapacity);
-    } else if *len == values.len() {
-        return Err(InsertError::ArrayIsFull);
-    }
-
-    for i in (index + 1..=*len).rev() {
-        values[i] = values[i - 1];
-    }
-    values[index] = value;
-    *len += 1;
-
-    Ok(())
+fn push_front<const LEN: usize>(values: [i32; LEN], value: i32) -> Vec<i32> {
+    insert(values, 0, value)
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum DeleteError {
-    IndexOutOfCapacity,
-    EmptyArray,
+fn push<const LEN: usize>(values: [i32; LEN], value: i32) -> Vec<i32> {
+    insert(values, LEN, value)
 }
 
-fn delete(values: &mut [i32], len: &mut usize, index: usize) -> Result<(), DeleteError> {
-    if *len == 0 {
-        return Err(DeleteError::EmptyArray);
-    } else if index >= *len {
-        return Err(DeleteError::IndexOutOfCapacity);
+fn delete<const LEN: usize>(values: &mut [i32; LEN], index: usize) -> Vec<i32> {
+    let new_len = LEN - 1;
+    let mut result = vec![0; new_len];
+
+    for i in 0..index {
+        result[i] = values[i];
     }
 
-    for i in index..=*len - 1 {
-        values[i] = values[i + 1];
+    for i in index..new_len {
+        result[i] = values[i + 1];
     }
-    *len -= 1;
+    result
+}
 
-    Ok(())
+fn pop_front<const LEN: usize>(values: &mut [i32; LEN]) -> Vec<i32> {
+    delete(values, 0)
+}
+
+fn pop<const LEN: usize>(values: &mut [i32; LEN]) -> Vec<i32> {
+    delete(values, LEN - 1)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // ---------- insert ----------
+
     #[test]
-    fn inserts_into_empty_array_at_beginning() {
-        let mut values = [0; 5];
-        let mut len = 0;
+    fn insert_in_the_middle() {
+        let values = [1, 2, 3];
 
-        let result = insert(&mut values, &mut len, 0, 10);
+        let result = insert(values, 1, 99);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 1);
-        assert_eq!(&values[..len], &[10]);
+        assert_eq!(result, vec![1, 99, 2, 3]);
     }
 
     #[test]
-    fn inserts_at_beginning_and_shifts_values_right() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn insert_at_the_beginning() {
+        let values = [1, 2, 3];
 
-        let result = insert(&mut values, &mut len, 0, 5);
+        let result = insert(values, 0, 99);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 4);
-        assert_eq!(&values[..len], &[5, 10, 20, 30]);
+        assert_eq!(result, vec![99, 1, 2, 3]);
     }
 
     #[test]
-    fn inserts_at_end() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn insert_at_the_end() {
+        let values = [1, 2, 3];
 
-        let result = insert(&mut values, &mut len, 3, 40);
+        let result = insert(values, 3, 99);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 4);
-        assert_eq!(&values[..len], &[10, 20, 30, 40]);
+        assert_eq!(result, vec![1, 2, 3, 99]);
     }
 
     #[test]
-    fn inserts_in_middle_and_shifts_values_right() {
-        let mut values = [10, 20, 30, 40, 0];
-        let mut len = 4;
+    fn insert_into_empty_array() {
+        let values: [i32; 0] = [];
 
-        let result = insert(&mut values, &mut len, 2, 99);
+        let result = insert(values, 0, 42);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 5);
-        assert_eq!(&values[..len], &[10, 20, 99, 30, 40]);
+        assert_eq!(result, vec![42]);
     }
 
     #[test]
-    fn returns_error_when_array_is_full() {
-        let mut values = [10, 20, 30];
-        let mut len = 3;
+    #[should_panic]
+    fn insert_panics_when_index_is_too_large() {
+        let values = [1, 2, 3];
 
-        let result = insert(&mut values, &mut len, 1, 99);
+        insert(values, 4, 99);
+    }
 
-        assert_eq!(result, Err(InsertError::ArrayIsFull));
-        assert_eq!(len, 3);
-        assert_eq!(&values[..len], &[10, 20, 30]);
+    // ---------- push_front ----------
+
+    #[test]
+    fn push_front_adds_value_to_beginning() {
+        let values = [1, 2, 3];
+
+        let result = push_front(values, 99);
+
+        assert_eq!(result, vec![99, 1, 2, 3]);
     }
 
     #[test]
-    fn returns_error_when_index_is_greater_than_len() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn push_front_empty_array() {
+        let values: [i32; 0] = [];
 
-        let result = insert(&mut values, &mut len, 4, 99);
+        let result = push_front(values, 99);
 
-        assert_eq!(result, Err(InsertError::IndexOutOfCapacity));
-        assert_eq!(len, 3);
-        assert_eq!(&values[..len], &[10, 20, 30]);
+        assert_eq!(result, vec![99]);
+    }
+
+    // ---------- push ----------
+
+    #[test]
+    fn push_adds_value_to_end() {
+        let values = [1, 2, 3];
+
+        let result = push(values, 99);
+
+        assert_eq!(result, vec![1, 2, 3, 99]);
     }
 
     #[test]
-    fn allows_insert_at_index_equal_to_len() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn push_empty_array() {
+        let values: [i32; 0] = [];
 
-        let result = insert(&mut values, &mut len, 3, 40);
+        let result = push(values, 99);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 4);
-        assert_eq!(&values[..len], &[10, 20, 30, 40]);
+        assert_eq!(result, vec![99]);
+    }
+
+    // ---------- delete ----------
+
+    #[test]
+    fn delete_from_middle() {
+        let mut values = [1, 2, 3, 4];
+
+        let result = delete(&mut values, 1);
+
+        assert_eq!(result, vec![1, 3, 4]);
     }
 
     #[test]
-    fn deletes_from_middle_and_shifts_left() {
-        let mut values = [10, 20, 30, 40, 0];
-        let mut len = 4;
+    fn delete_from_beginning() {
+        let mut values = [1, 2, 3, 4];
 
-        let result = delete(&mut values, &mut len, 1);
+        let result = delete(&mut values, 0);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 3);
-        assert_eq!(&values[..len], &[10, 30, 40]);
+        assert_eq!(result, vec![2, 3, 4]);
     }
 
     #[test]
-    fn deletes_first_element() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn delete_from_end() {
+        let mut values = [1, 2, 3, 4];
 
-        let result = delete(&mut values, &mut len, 0);
+        let result = delete(&mut values, 3);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 2);
-        assert_eq!(&values[..len], &[20, 30]);
+        assert_eq!(result, vec![1, 2, 3]);
     }
 
     #[test]
-    fn deletes_last_element() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn delete_from_single_element_array() {
+        let mut values = [42];
 
-        let result = delete(&mut values, &mut len, 2);
+        let result = delete(&mut values, 0);
 
-        assert_eq!(result, Ok(()));
-        assert_eq!(len, 2);
-        assert_eq!(&values[..len], &[10, 20]);
+        assert_eq!(result, Vec::<i32>::new());
     }
 
     #[test]
-    fn returns_error_when_array_is_empty() {
-        let mut values = [0, 0, 0];
-        let mut len = 0;
+    #[should_panic]
+    fn delete_panics_when_index_is_too_large() {
+        let mut values = [1, 2, 3];
 
-        let result = delete(&mut values, &mut len, 0);
+        delete(&mut values, 3);
+    }
 
-        assert_eq!(result, Err(DeleteError::EmptyArray));
-        assert_eq!(len, 0);
+    // ---------- pop_front ----------
+
+    #[test]
+    fn pop_front_removes_first_element() {
+        let mut values = [1, 2, 3];
+
+        let result = pop_front(&mut values);
+
+        assert_eq!(result, vec![2, 3]);
     }
 
     #[test]
-    fn returns_error_when_index_is_out_of_logical_len() {
-        let mut values = [10, 20, 30, 0, 0];
-        let mut len = 3;
+    fn pop_front_single_element_array() {
+        let mut values = [42];
 
-        let result = delete(&mut values, &mut len, 3);
+        let result = pop_front(&mut values);
 
-        assert_eq!(result, Err(DeleteError::IndexOutOfCapacity));
-        assert_eq!(len, 3);
-        assert_eq!(&values[..len], &[10, 20, 30]);
+        assert_eq!(result, Vec::<i32>::new());
+    }
+
+    // ---------- pop ----------
+
+    #[test]
+    fn pop_removes_last_element() {
+        let mut values = [1, 2, 3];
+
+        let result = pop(&mut values);
+
+        assert_eq!(result, vec![1, 2]);
     }
 
     #[test]
-    fn returns_error_when_index_is_bigger_than_capacity() {
-        let mut values = [10, 20, 30];
-        let mut len = 3;
+    fn pop_single_element_array() {
+        let mut values = [42];
 
-        let result = delete(&mut values, &mut len, 10);
+        let result = pop(&mut values);
 
-        assert_eq!(result, Err(DeleteError::IndexOutOfCapacity));
-        assert_eq!(len, 3);
-        assert_eq!(&values[..len], &[10, 20, 30]);
+        assert_eq!(result, Vec::<i32>::new());
     }
 }
