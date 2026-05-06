@@ -3,14 +3,10 @@ fn flip_array(mut values: Vec<i32>) -> Vec<i32> {
         return values;
     }
 
-    let mut left = 0;
-    let mut right = values.len() - 1;
-    while left < right {
+    for left in 0..(values.len() / 2) {
+        let right = values.len() - left - 1;
         values.swap(left, right);
-        left += 1;
-        right -= 1;
     }
-
     values
 }
 
